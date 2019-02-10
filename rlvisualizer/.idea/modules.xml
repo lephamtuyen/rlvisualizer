@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$USER_HOME$/Downloads/Reinforcement_Learning_Quang2nd_machine/R_DDPG_Reptile/R_DDPG_Code/.idea/R_DDPG.iml" filepath="$USER_HOME$/Downloads/Reinforcement_Learning_Quang2nd_machine/R_DDPG_Reptile/R_DDPG_Code/.idea/R_DDPG.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/rlvisualizer.iml" filepath="$PROJECT_DIR$/.idea/rlvisualizer.iml" />
+    </modules>
+  </component>
+</project>
