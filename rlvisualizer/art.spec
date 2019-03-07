@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['art.py'],
-             pathex=['C:\\Users\\ailab\\Desktop\\rlvisualizer\\rlvisualizer'],
+             pathex=['C:\\Users\\ailab\\Documents\\GitHub\\rlvisualizer\\rlvisualizer'],
              binaries=[],
              datas=[],
              hiddenimports=[],
