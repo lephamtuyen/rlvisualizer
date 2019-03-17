@@ -1,3 +1,4 @@
+from __future__ import print_function
 import matplotlib as mpl
 mpl.use('Qt4Agg',force=True)
 from PyQt4.QtCore import *
@@ -35,7 +36,7 @@ class Main(QMainWindow, Ui_MainWindow):
         QObject.connect(self.about, SIGNAL("triggered()"), self, SLOT("slotAbout()"))
         QObject.connect(self.open, SIGNAL("triggered()"), self, SLOT("slotOpen()"))
         QObject.connect(self.saveAnimation, SIGNAL("triggered()"), self, SLOT("saveAnimationSlot()"))
-        QObject.connect(self.saveVisibleData, SIGNAL("triggered()"), self, SLOT("saveVisibleDataSlot()"))
+        QObject.connect(self.saveData, SIGNAL("triggered()"), self, SLOT("saveDataSlot()"))
         QObject.connect(self.savePresets, SIGNAL("triggered()"), self, SLOT("savePresets()"))
         QObject.connect(self.storePresets, SIGNAL("triggered()"), self, SLOT("restorePresets()"))
         QObject.connect(self.addTitle, SIGNAL("triggered()"), self, SLOT("addTitleSlot()"))
@@ -48,6 +49,8 @@ class Main(QMainWindow, Ui_MainWindow):
         QObject.connect(self.rangeColor, SIGNAL("triggered()"), self, SLOT("rangeColorSetSlot()"))
         QObject.connect(self.trainingTimeOrder, SIGNAL("triggered()"), self, SLOT("trainingTimeOrderSlot()"))
         QObject.connect(self.locationOrder, SIGNAL("triggered()"), self, SLOT("locationOrderSlot()"))
+        QObject.connect(self.deleteSelectedLine, SIGNAL("triggered()"), self, SLOT("deleteSelectedLineSlot()"))
+        QObject.connect(self.deleteUnselectedLine, SIGNAL("triggered()"), self, SLOT("deleteUnselectedLineSlot()"))
 
         QObject.connect(self.pickColor, SIGNAL("triggered()"), self, SLOT("pickColorSlot()"))
         self.pickColor.idx = 0
@@ -57,25 +60,27 @@ class Main(QMainWindow, Ui_MainWindow):
         self.treeWidget.setColumnCount(2)
         self.treeWidget.setHeaderLabels(HEADERS)
 
-        self.leftTreeWidget.setColumnCount(1)
-        selmodel = self.leftTreeWidget.selectionModel()
-        selmodel.selectionChanged.connect(self.handleSelection)
+        self.leftTreeWidget.setColumnCount(2)
+        self.leftTreeWidget.setHeaderLabels(HEADERS)
 
         self.fig = plt.figure()
         self.plots = None
+        self.deletedLines = None
         self.addmpl(self.fig)
         self.selectedPlot = False
         self.checkedArea = False
-        self.checkedFlag = False
+        self.checkedFlag = True
         self.checkedBorder = False
         self.checkedAuthors = False
         self.selectedLine = None
+        self.pickedLines = None
         self.selectedAreaPlot = None
         self.trajectory = None
         self.titleAnnotate = None
         self.alphaValue = 1.0
         self.colorSetIdx = 0
         self.trajectoryOrderIdx = 0
+        self.ctrlKey = False
 
         self.pickedBackgroundColor = 'white'
         plt.gcf().set_facecolor(self.pickedBackgroundColor)
@@ -90,6 +95,27 @@ class Main(QMainWindow, Ui_MainWindow):
         self.selectedAreaColor = []
         self.selectedAreaColors = []
 
+    def get_start_end(self, idx):
+        N = len(self.plots)
+        numOfBatch = self.batchSpinBox.value()
+        batchSize = int(np.ceil(N / numOfBatch))
+        if (idx == 0):
+            start_line = 0
+            end_line = N - 1
+        else:
+            real_idx = idx - 1
+            if (real_idx == 0):
+                start_line = real_idx * batchSize
+            else:
+                start_line = real_idx * batchSize + 1
+
+            if (real_idx == numOfBatch - 1):
+                end_line = N - 1
+            else:
+                end_line = (real_idx + 1) * batchSize
+
+        return start_line, end_line
+
     @pyqtSlot(int)
     def comboBoxIndexChange(self, idx):
         if (idx == -1):
@@ -99,36 +125,26 @@ class Main(QMainWindow, Ui_MainWindow):
             return
 
         if (self.trainingOrder == 0):
-            N = len(self.plots)
-            numOfBatch = self.batchSpinBox.value()
-            batchSize = int(np.ceil(N / numOfBatch))
-
-            if (idx == 0):
-                start_line = 0
-                end_line = N - 1
-            else:
-                real_idx = idx - 1
-                if (real_idx == 0):
-                    start_line = real_idx * batchSize
-                else:
-                    start_line = real_idx * batchSize + 1
-
-                if (real_idx == numOfBatch - 1):
-                    end_line = N - 1
-                else:
-                    end_line = (real_idx + 1) * batchSize
+            start_line, end_line = self.get_start_end(idx)
 
             self.selectedBatchColor = self.selectedBatchColors[idx]
 
-            if (self.selectedLine is not None and type(self.selectedLine) == int):
-                plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                plt.set_linestyle('solid')
-                self.treeWidget.clear()
+            if (self.pickedLines is not None):
+                if (type(self.pickedLines) == int):
+                    plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                    plt.set_linestyle('solid')
+                    self.treeWidget.clear()
+                elif(type(self.pickedLines) == list):
+                    for idx in self.pickedLines:
+                        plt = self.plots[self.random_draw_sequence[idx]][0]
+                        plt.set_linestyle('solid')
+                        self.treeWidget.clear()
+                self.pickedLines = None
 
             self.selectedLine = np.array([start_line, end_line])
 
-            for i in range(N):
-                if (i >= start_line and i <= end_line):
+            for i in range(len(self.plots)):
+                if (i >= start_line and i <= end_line and self.deletedLines[i] == False):
                     self.plots[self.random_draw_sequence[i]][0].set_visible(True)
                 else:
                     self.plots[self.random_draw_sequence[i]][0].set_visible(False)
@@ -149,17 +165,24 @@ class Main(QMainWindow, Ui_MainWindow):
 
             self.selectedBatchColor = self.selectedBatchColors[idx]
 
-            if (self.selectedLine is not None and type(self.selectedLine) == int):
-                plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                plt.set_linestyle('solid')
-                self.treeWidget.clear()
+            if (self.pickedLines is not None):
+                if (type(self.pickedLines) == int):
+                    plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                    plt.set_linestyle('solid')
+                    self.treeWidget.clear()
+                elif(type(self.pickedLines) == list):
+                    for idx in self.pickedLines:
+                        plt = self.plots[self.random_draw_sequence[idx]][0]
+                        plt.set_linestyle('solid')
+                        self.treeWidget.clear()
+                self.pickedLines = None
 
             self.selectedLine = np.array([idx, idx])
 
             for i in range(len(self.plots)):
                 x = self.trajectory[i, 0][0]
                 y = self.trajectory[i, 1][0]
-                if (x > x1 and x < x2 and y > y1 and y < y2):
+                if (x > x1 and x < x2 and y > y1 and y < y2 and self.deletedLines[i] == False):
                     self.plots[self.random_draw_sequence[i]][0].set_visible(True)
                 else:
                     self.plots[self.random_draw_sequence[i]][0].set_visible(False)
@@ -167,6 +190,9 @@ class Main(QMainWindow, Ui_MainWindow):
         self.canvas.draw()
         self.treeWidget.clear()
         self.addTreeWidgetItems()
+        self.leftTreeWidget.clear()
+        self.refreshLeftTreeWidgetItems()
+        self.setFocus(Qt.ActiveWindowFocusReason)
 
     @pyqtSlot()
     def slotAbout(self):
@@ -197,6 +223,7 @@ class Main(QMainWindow, Ui_MainWindow):
         plt.gca().axes.set_yticks([])
 
         self.plots = [None] * self.trajectory.shape[0]
+        self.deletedLines = [0] * self.trajectory.shape[0]
 
         colors = self.assignColorSet()
         self.random_draw_sequence = np.random.permutation(range(self.trajectory.shape[0]))
@@ -584,7 +611,6 @@ class Main(QMainWindow, Ui_MainWindow):
             self.refreshLeftTreeWidgetItems()
             self.selectedAreaPlot = None
 
-
     @pyqtSlot()
     def slotOpen(self):
         dir = os.path.dirname(str(self.openFilePath))
@@ -609,12 +635,17 @@ class Main(QMainWindow, Ui_MainWindow):
         if (self.selectedPlot == False):
             return
 
-        if (self.selectedLine is not None and type(self.selectedLine) == int):
-            plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-            plt.set_linestyle('solid')
-            self.treeWidget.clear()
-
-        self.selectedLine = None
+        if (self.pickedLines is not None):
+            if (type(self.pickedLines) == int):
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                plt.set_linestyle('solid')
+                self.treeWidget.clear()
+            elif (type(self.pickedLines) == list):
+                for idx in self.pickedLines:
+                    plt = self.plots[self.random_draw_sequence[idx]][0]
+                    plt.set_linestyle('solid')
+                    self.treeWidget.clear()
+            self.pickedLines = None
 
         if (len(self.areaPlots) == 0):
             visible = False
@@ -884,52 +915,49 @@ class Main(QMainWindow, Ui_MainWindow):
         self.colorSetIdx = 0
 
         if (self.selectedLine is not None):
-            if (type(self.selectedLine) == int):
-                pass
-            else:
-                if (self.trainingOrder == 0):
-                    start_line = self.selectedLine[0]
-                    end_line = self.selectedLine[1]
+            if (self.trainingOrder == 0):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
 
-                    colors = cm.rainbow(np.linspace(0, 1, end_line - start_line + 1))
-                    colors[:, 3] = 1.0
-                    j = 0
-                    for i in range(len(self.plots)):
-                        if (i >= start_line and i <= end_line):
-                            plt = self.plots[self.random_draw_sequence[i]][0]
-                            color = colors[j]
-                            plt.set_color(color)
-                            j += 1
-                elif(self.trainingOrder == 1):
-                    numOfBatch = self.batchSpinBox.value()
-                    idx = self.selectedLine[0]
-                    if (idx == 0):
-                        x_idx = 0
-                        y_idx = 0
-                    else:
-                        x_idx = idx // numOfBatch
-                        y_idx = idx % numOfBatch
-
-                    x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
-                    x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
-                    y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
-                    y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
-
-                    plots = []
-                    for i in range(len(self.plots)):
-                        x = self.trajectory[i, 0][0]
-                        y = self.trajectory[i, 1][0]
-                        if (x > x1 and x < x2 and y > y1 and y < y2):
-                            plots.append(self.plots[self.random_draw_sequence[i]][0])
-
-
-                    colors = cm.rainbow(np.linspace(0, 1, len(plots)))
-                    colors[:, 3] = 1.0
-                    j = 0
-                    for plt in plots:
+                colors = cm.rainbow(np.linspace(0, 1, end_line - start_line + 1))
+                colors[:, 3] = 1.0
+                j = 0
+                for i in range(len(self.plots)):
+                    if (i >= start_line and i <= end_line):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
                         color = colors[j]
                         plt.set_color(color)
                         j += 1
+            elif(self.trainingOrder == 1):
+                numOfBatch = self.batchSpinBox.value()
+                idx = self.selectedLine[0]
+                if (idx == 0):
+                    x_idx = 0
+                    y_idx = 0
+                else:
+                    x_idx = idx // numOfBatch
+                    y_idx = idx % numOfBatch
+
+                x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
+                x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
+                y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
+                y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
+
+                plots = []
+                for i in range(len(self.plots)):
+                    x = self.trajectory[i, 0][0]
+                    y = self.trajectory[i, 1][0]
+                    if (x > x1 and x < x2 and y > y1 and y < y2):
+                        plots.append(self.plots[self.random_draw_sequence[i]][0])
+
+
+                colors = cm.rainbow(np.linspace(0, 1, len(plots)))
+                colors[:, 3] = 1.0
+                j = 0
+                for plt in plots:
+                    color = colors[j]
+                    plt.set_color(color)
+                    j += 1
 
         elif (self.selectedAreaPlot is not None):
             colors = cm.rainbow(np.linspace(0, 1, len(self.areaPlots[self.selectedAreaPlot])))
@@ -967,93 +995,90 @@ class Main(QMainWindow, Ui_MainWindow):
         r2, g2, b2 = self.matplotlib_color2[0], self.matplotlib_color2[1], self.matplotlib_color2[2]
 
         if (self.selectedLine is not None):
-            if (type(self.selectedLine) == int):
-                pass
-            else:
-                if (self.trainingOrder == 0):
-                    start_line = self.selectedLine[0]
-                    end_line = self.selectedLine[1]
+            if (self.trainingOrder == 0):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
 
-                    colors = []
-                    steps = end_line - start_line + 1
-                    rdelta, gdelta, bdelta = (r2 - r1) / steps, (g2 - g1) / steps, (b2 - b1) / steps
-                    for step in range(steps):
-                        r1 += rdelta
-                        g1 += gdelta
-                        b1 += bdelta
-                        if (r1 > 1):
-                            r1 = 1
-                        if (g1 > 1):
-                            g1 = 1
-                        if (b1 > 1):
-                            b1 = 1
+                colors = []
+                steps = end_line - start_line + 1
+                rdelta, gdelta, bdelta = (r2 - r1) / steps, (g2 - g1) / steps, (b2 - b1) / steps
+                for step in range(steps):
+                    r1 += rdelta
+                    g1 += gdelta
+                    b1 += bdelta
+                    if (r1 > 1):
+                        r1 = 1
+                    if (g1 > 1):
+                        g1 = 1
+                    if (b1 > 1):
+                        b1 = 1
 
-                        if (r1 < 0):
-                            r1 = 0
-                        if (g1 < 0):
-                            g1 = 0
-                        if (b1 < 0):
-                            b1 = 0
+                    if (r1 < 0):
+                        r1 = 0
+                    if (g1 < 0):
+                        g1 = 0
+                    if (b1 < 0):
+                        b1 = 0
 
-                        colors.append([r1, g1, b1, 1.0])
+                    colors.append([r1, g1, b1, 1.0])
 
-                    j = 0
-                    for i in range(len(self.plots)):
-                        if (i >= start_line and i <= end_line):
-                            plt = self.plots[self.random_draw_sequence[i]][0]
-                            color = colors[j]
-                            plt.set_color(color)
-                            j += 1
-                elif(self.trainingOrder == 1):
-                    numOfBatch = self.batchSpinBox.value()
-                    idx = self.selectedLine[0]
-                    if (idx == 0):
-                        x_idx = 0
-                        y_idx = 0
-                    else:
-                        x_idx = idx // numOfBatch
-                        y_idx = idx % numOfBatch
-
-                    x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
-                    x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
-                    y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
-                    y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
-
-                    plots = []
-                    for i in range(len(self.plots)):
-                        x = self.trajectory[i, 0][0]
-                        y = self.trajectory[i, 1][0]
-                        if (x > x1 and x < x2 and y > y1 and y < y2):
-                            plots.append(self.plots[self.random_draw_sequence[i]][0])
-
-                    colors = []
-                    steps = len(plots)
-                    rdelta, gdelta, bdelta = (r2 - r1) / steps, (g2 - g1) / steps, (b2 - b1) / steps
-                    for step in range(steps):
-                        r1 += rdelta
-                        g1 += gdelta
-                        b1 += bdelta
-                        if (r1 > 1):
-                            r1 = 1
-                        if (g1 > 1):
-                            g1 = 1
-                        if (b1 > 1):
-                            b1 = 1
-
-                        if (r1 < 0):
-                            r1 = 0
-                        if (g1 < 0):
-                            g1 = 0
-                        if (b1 < 0):
-                            b1 = 0
-
-                        colors.append([r1, g1, b1, 1.0])
-
-                    j = 0
-                    for plot in plots:
+                j = 0
+                for i in range(len(self.plots)):
+                    if (i >= start_line and i <= end_line):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
                         color = colors[j]
-                        plot.set_color(color)
+                        plt.set_color(color)
                         j += 1
+            elif(self.trainingOrder == 1):
+                numOfBatch = self.batchSpinBox.value()
+                idx = self.selectedLine[0]
+                if (idx == 0):
+                    x_idx = 0
+                    y_idx = 0
+                else:
+                    x_idx = idx // numOfBatch
+                    y_idx = idx % numOfBatch
+
+                x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
+                x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
+                y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
+                y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
+
+                plots = []
+                for i in range(len(self.plots)):
+                    x = self.trajectory[i, 0][0]
+                    y = self.trajectory[i, 1][0]
+                    if (x > x1 and x < x2 and y > y1 and y < y2):
+                        plots.append(self.plots[self.random_draw_sequence[i]][0])
+
+                colors = []
+                steps = len(plots)
+                rdelta, gdelta, bdelta = (r2 - r1) / steps, (g2 - g1) / steps, (b2 - b1) / steps
+                for step in range(steps):
+                    r1 += rdelta
+                    g1 += gdelta
+                    b1 += bdelta
+                    if (r1 > 1):
+                        r1 = 1
+                    if (g1 > 1):
+                        g1 = 1
+                    if (b1 > 1):
+                        b1 = 1
+
+                    if (r1 < 0):
+                        r1 = 0
+                    if (g1 < 0):
+                        g1 = 0
+                    if (b1 < 0):
+                        b1 = 0
+
+                    colors.append([r1, g1, b1, 1.0])
+
+                j = 0
+                for plot in plots:
+                    color = colors[j]
+                    plot.set_color(color)
+                    j += 1
         elif (self.selectedAreaPlot is not None):
             colors = []
             steps = len(self.areaPlots[self.selectedAreaPlot])
@@ -1110,6 +1135,63 @@ class Main(QMainWindow, Ui_MainWindow):
         self.batchSpinBox.setMinimum(1)
         self.batchSpinBox.setMaximum(10)
         self.batchSpinBox.setValue(1)
+
+    @pyqtSlot()
+    def deleteSelectedLineSlot(self):
+        if (self.selectedPlot == False):
+            return
+
+        if (self.checkedArea == True):
+            pass
+        else:
+            if (self.pickedLines is not None):
+                if (type(self.pickedLines) == int):
+                    plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                    plt.set_visible(False)
+                    self.deletedLines[self.pickedLines] = True
+                elif (type(self.pickedLines) == list):
+                    for idx in self.pickedLines:
+                        plt = self.plots[self.random_draw_sequence[idx]][0]
+                        plt.set_visible(False)
+                        self.deletedLines[idx] = True
+
+                self.pickedLines = None
+
+        self.leftTreeWidget.clear()
+        self.treeWidget.clear()
+        self.addTreeWidgetItems()
+        self.refreshLeftTreeWidgetItems()
+        self.canvas.draw()
+
+    @pyqtSlot()
+    def deleteUnselectedLineSlot(self):
+        if (self.selectedPlot == False):
+            return
+
+        if (self.pickedLines is not None):
+            if (type(self.pickedLines) == int):
+                for i in range(len(self.plots)):
+                    if(i != self.pickedLines):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
+                        plt.set_visible(False)
+                        self.deletedLines[i] = True
+            elif (type(self.pickedLines) == list):
+                start_line, end_line = self.get_start_end(self.comboBox.currentIndex())
+                i = start_line
+                while i <= end_line:
+                    if (i not in self.pickedLines):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
+                        plt.set_visible(False)
+                        self.deletedLines[i] = True
+                    i += 1
+            else:
+                pass
+
+        self.leftTreeWidget.clear()
+        self.treeWidget.clear()
+        self.addTreeWidgetItems()
+        self.refreshLeftTreeWidgetItems()
+        self.canvas.draw()
 
     @pyqtSlot()
     def hideAuthorsSlot(self):
@@ -1303,7 +1385,7 @@ class Main(QMainWindow, Ui_MainWindow):
                     movie.grab_frame()
 
     @pyqtSlot()
-    def saveVisibleDataSlot(self):
+    def saveDataSlot(self):
         if (self.plots is None):
             return
 
@@ -1319,7 +1401,7 @@ class Main(QMainWindow, Ui_MainWindow):
 
         data = []
         for episode in range(self.trajectory.shape[0]):
-            if (self.plots[self.random_draw_sequence[episode]][0].get_visible()):
+            if (self.deletedLines[episode] == False):
                 data.append(self.trajectory[episode, :])
 
         self.save_plot_data(filePath, [data, [np.array([self.goal[0],self.goal[1]]), self.radius]])
@@ -1380,10 +1462,11 @@ class Main(QMainWindow, Ui_MainWindow):
     @pyqtSlot()
     def resetSlot(self):
         if (self.selectedPlot == True):
+            self.deletedLines = [0] * self.trajectory.shape[0]
+
             self.isAnimated = False
             self.comboBox.setCurrentIndex(0)
             self.selectedLine = np.array([0, len(self.plots) - 1])
-
             colors = cm.rainbow(np.linspace(0, 1, self.trajectory.shape[0]))
             colors[:, 3] = 1.0
             for i in range(len(self.plots)):
@@ -1406,7 +1489,6 @@ class Main(QMainWindow, Ui_MainWindow):
             self.colorSetIdx = 0
             self.trainingOrder = 0
 
-
             self.treeWidget.clear()
             self.addTreeWidgetItems()
             self.leftTreeWidget.clear()
@@ -1416,7 +1498,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.setupComboBox()
 
             self.unselectAreaMode()
-            self.unHideFlagMode()
+            self.hideFlagMode()
 
     @pyqtSlot()
     def animateBtnClickedSlot(self):
@@ -1430,10 +1512,11 @@ class Main(QMainWindow, Ui_MainWindow):
 
             self.isAnimated = True
 
-            if (self.selectedLine is not None):
-                if (type(self.selectedLine) == int):
-                    self.start_line = self.selectedLine
-                    self.end_line = self.selectedLine
+
+            if (self.pickedLines is not None or self.selectedLine is not None):
+                if (type(self.pickedLines) == int):
+                    self.start_line = self.pickedLines
+                    self.end_line = self.pickedLines
                 else:
                     self.start_line = self.selectedLine[0]
                     self.end_line = self.selectedLine[1]
@@ -1479,6 +1562,20 @@ class Main(QMainWindow, Ui_MainWindow):
                 self.idxForAnimateArea = 0
                 self.animateArea()
 
+    def keyPressEvent(self, e):
+        print(e.key())
+        if e.key() == QtCore.Qt.Key_Control:
+            self.ctrlKey = True
+            print("keyPressEvent")
+        e.accept()
+
+    def keyReleaseEvent(self, e):
+        print(e.key())
+        if e.key() == QtCore.Qt.Key_Control:
+            self.ctrlKey = False
+            print("keyReleaseEvent")
+        e.accept()
+
     def onPick(self, event):
         if (self.isAnimated == True):
             return
@@ -1490,17 +1587,40 @@ class Main(QMainWindow, Ui_MainWindow):
         if (plt.get_visible() == False):
             return
 
-        if (self.selectedLine is not None):
-            if (type(self.selectedLine) == int):
-                plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                plt.set_linestyle('solid')
+        if (self.ctrlKey == True):
+            if (self.pickedLines is not None):
+                if (type(self.pickedLines) == int):
+                    temp_line = self.pickedLines
+                    self.pickedLines = [temp_line]
+                elif(type(self.pickedLines) == list):
+                    pass
+                else: #numpy array
+                    self.pickedLines = []
+            else:
+                self.pickedLines = []
 
-        self.treeWidget.clear()
-        self.selectedLine = idx
-        plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-        plt.set_linestyle((0, (5, 1)))
+            self.pickedLines.append(idx)
+            plt.set_linestyle((0, (5, 1)))
+        else:
+            if (self.pickedLines is not None):
+                if (type(self.pickedLines) == int):
+                    plt_old = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                    plt_old.set_linestyle('solid')
+                elif(type(self.pickedLines) == list):
+                    for i in self.pickedLines:
+                        plt_old = self.plots[self.random_draw_sequence[i]][0]
+                        plt_old.set_linestyle('solid')
+                    self.pickedLines = []
+                else: #numpy array
+                    pass
+            else:
+                self.pickedLines = []
+
+            self.pickedLines = idx
+            plt.set_linestyle((0, (5, 1)))
 
         self.canvas.draw()
+        self.treeWidget.clear()
         self.addTreeWidgetItems()
 
     def setupComboBox(self):
@@ -1568,6 +1688,21 @@ class Main(QMainWindow, Ui_MainWindow):
             if (self.selectedAreaPlot is not None):
                 self.leftTreeWidget.setItemSelected(self.leftTreeWidget.topLevelItem(self.selectedAreaPlot), True)
                 self.updateSelectedAreaPlots()
+        else:
+            if (self.selectedLine is not None):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
+                i = start_line
+                while i <= end_line:
+                    if (self.deletedLines[i] == False):
+                        # Line number
+                        item = QtGui.QTreeWidgetItem(self.leftTreeWidget)
+                        item.setText(0, "Line")
+
+                        lineNumber = QtGui.QLabel(str(i))
+                        self.leftTreeWidget.setItemWidget(item, 1, lineNumber)
+
+                    i += 1
 
     def updateSelectedAreaPlots(self):
         if (self.selectedAreaPlot is not None):
@@ -1598,86 +1733,87 @@ class Main(QMainWindow, Ui_MainWindow):
 
     def addTreeWidgetItems(self):
         if (self.selectedPlot == True):
-            if (self.selectedLine is not None):
-                if (type(self.selectedLine) == int):
-                    plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
+            if (type(self.pickedLines) == int):
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
 
-                    # Line number
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Line")
+                # Line number
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Line")
 
-                    self.lineNumber = QtGui.QLabel(str(self.selectedLine))
-                    self.treeWidget.setItemWidget(item, 1, self.lineNumber)
+                self.lineNumber = QtGui.QLabel(str(self.pickedLines))
+                self.treeWidget.setItemWidget(item, 1, self.lineNumber)
 
-                    # isHidden
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "isHidden")
-                    self.lineCheckBox = QtGui.QCheckBox()
-                    self.lineCheckBox.setCheckState(QtCore.Qt.Unchecked)
-                    QtCore.QObject.connect(self.lineCheckBox, SIGNAL("stateChanged(int)"), self, SLOT("checkedSlot(int)"))
-                    self.treeWidget.setItemWidget(item, 1, self.lineCheckBox)
+                # isHidden
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "isHidden")
+                self.lineCheckBox = QtGui.QCheckBox()
+                self.lineCheckBox.setCheckState(QtCore.Qt.Unchecked)
+                QtCore.QObject.connect(self.lineCheckBox, SIGNAL("stateChanged(int)"), self, SLOT("checkedSlot(int)"))
+                self.treeWidget.setItemWidget(item, 1, self.lineCheckBox)
 
-                    # Thickness
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Thickness")
-                    self.lineSpinBox = QtGui.QDoubleSpinBox()
-                    self.lineSpinBox.setValue(plt.get_linewidth())
-                    self.lineSpinBox.setMaximum(200)
-                    QObject.connect(self.lineSpinBox, SIGNAL("valueChanged(double)"), self, SLOT("valueChanged(double)"))
-                    self.treeWidget.setItemWidget(item, 1, self.lineSpinBox)
+                # Thickness
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Thickness")
+                self.lineSpinBox = QtGui.QDoubleSpinBox()
+                self.lineSpinBox.setValue(plt.get_linewidth())
+                self.lineSpinBox.setMaximum(200)
+                QObject.connect(self.lineSpinBox, SIGNAL("valueChanged(double)"), self, SLOT("valueChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.lineSpinBox)
 
-                    # Alpha
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Alpha")
-                    self.alphaSpinBox = QtGui.QDoubleSpinBox()
-                    self.alphaSpinBox.setMaximum(1.0)
-                    self.alphaSpinBox.setMinimum(0.1)
-                    self.alphaSpinBox.setValue(self.alphaValue)
-                    QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
-                                    SLOT("valueAlphaChanged(double)"))
-                    self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
+                # Alpha
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Alpha")
+                self.alphaSpinBox = QtGui.QDoubleSpinBox()
+                self.alphaSpinBox.setMaximum(1.0)
+                self.alphaSpinBox.setMinimum(0.1)
+                self.alphaSpinBox.setValue(self.alphaValue)
+                QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
+                                SLOT("valueAlphaChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
 
-                    # Color
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Color")
-                    self.colorBtn = QtGui.QPushButton()
-                    color = rgb2hex(plt.get_color())
+                # Color
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Color")
+                self.colorBtn = QtGui.QPushButton()
+                color = rgb2hex(plt.get_color())
 
-                    self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color)
-                    self.colorBtn.connect(self.colorBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
-                    self.treeWidget.setItemWidget(item, 1, self.colorBtn)
-                else:
-                    start_line = self.selectedLine[0]
-                    end_line = self.selectedLine[1]
+                self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color)
+                self.colorBtn.connect(self.colorBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
+                self.treeWidget.setItemWidget(item, 1, self.colorBtn)
+            elif (type(self.pickedLines) == list):
+                pass
+            elif(self.selectedLine is not None):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
 
-                    # Line number
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Line")
+                # Line number
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Line")
 
-                    self.lineNumber = QtGui.QLabel(str(start_line) + "~" + str(end_line))
-                    self.treeWidget.setItemWidget(item, 1, self.lineNumber)
+                self.lineNumber = QtGui.QLabel(str(start_line) + "~" + str(end_line))
+                self.treeWidget.setItemWidget(item, 1, self.lineNumber)
 
-                    # Thickness
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Thickness")
-                    self.lineSpinBox = QtGui.QDoubleSpinBox()
-                    plt = self.plots[self.random_draw_sequence[start_line]][0]
-                    self.lineSpinBox.setValue(plt.get_linewidth())
-                    self.lineSpinBox.setMaximum(200)
-                    QObject.connect(self.lineSpinBox, SIGNAL("valueChanged(double)"), self,
-                                    SLOT("valueChanged(double)"))
-                    self.treeWidget.setItemWidget(item, 1, self.lineSpinBox)
+                # Thickness
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Thickness")
+                self.lineSpinBox = QtGui.QDoubleSpinBox()
+                plt = self.plots[self.random_draw_sequence[start_line]][0]
+                self.lineSpinBox.setValue(plt.get_linewidth())
+                self.lineSpinBox.setMaximum(200)
+                QObject.connect(self.lineSpinBox, SIGNAL("valueChanged(double)"), self,
+                                SLOT("valueChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.lineSpinBox)
 
-                    # Alpha
-                    item = QtGui.QTreeWidgetItem(self.treeWidget)
-                    item.setText(0, "Alpha")
-                    self.alphaSpinBox = QtGui.QDoubleSpinBox()
-                    self.alphaSpinBox.setMaximum(1.0)
-                    self.alphaSpinBox.setMinimum(0.1)
-                    self.alphaSpinBox.setValue(self.alphaValue)
-                    QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
-                                    SLOT("valueAlphaChanged(double)"))
-                    self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
+                # Alpha
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Alpha")
+                self.alphaSpinBox = QtGui.QDoubleSpinBox()
+                self.alphaSpinBox.setMaximum(1.0)
+                self.alphaSpinBox.setMinimum(0.1)
+                self.alphaSpinBox.setValue(self.alphaValue)
+                QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
+                                SLOT("valueAlphaChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
 
             elif(self.selectedAreaPlot is not None):
                 # Thickness
@@ -1713,44 +1849,44 @@ class Main(QMainWindow, Ui_MainWindow):
             matplotlib_color.append(255.0)
             matplotlib_color = np.array(matplotlib_color) / 255.0
 
-            if (self.selectedLine is not None):
-                if (type(self.selectedLine) == int):
-                    self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color.name())
-                    plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                    plt.set_color(matplotlib_color)
-                else:
-                    self.selectedBatchColor.append(matplotlib_color)
 
-                    if (self.trainingOrder == 0):
-                        start_line = self.selectedLine[0]
-                        end_line = self.selectedLine[1]
-                        for i in range(len(self.plots)):
-                            if (i >= start_line and i <= end_line):
-                                plt = self.plots[self.random_draw_sequence[i]][0]
-                                color = random.choice(self.selectedBatchColor)
-                                plt.set_color(color)
-                    elif(self.trainingOrder == 1):
-                        numOfBatch = self.batchSpinBox.value()
-                        idx = self.selectedLine[0]
-                        if (idx == 0):
-                            x_idx = 0
-                            y_idx = 0
-                        else:
-                            x_idx = idx // numOfBatch
-                            y_idx = idx % numOfBatch
+            if (type(self.pickedLines) == int):
+                self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color.name())
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                plt.set_color(matplotlib_color)
+            elif (self.selectedLine is not None):
+                self.selectedBatchColor.append(matplotlib_color)
 
-                        x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
-                        x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
-                        y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
-                        y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
+                if (self.trainingOrder == 0):
+                    start_line = self.selectedLine[0]
+                    end_line = self.selectedLine[1]
+                    for i in range(len(self.plots)):
+                        if (i >= start_line and i <= end_line):
+                            plt = self.plots[self.random_draw_sequence[i]][0]
+                            color = random.choice(self.selectedBatchColor)
+                            plt.set_color(color)
+                elif(self.trainingOrder == 1):
+                    numOfBatch = self.batchSpinBox.value()
+                    idx = self.selectedLine[0]
+                    if (idx == 0):
+                        x_idx = 0
+                        y_idx = 0
+                    else:
+                        x_idx = idx // numOfBatch
+                        y_idx = idx % numOfBatch
 
-                        for i in range(len(self.plots)):
-                            x = self.trajectory[i, 0][0]
-                            y = self.trajectory[i, 1][0]
-                            if (x > x1 and x < x2 and y > y1 and y < y2):
-                                plt = self.plots[self.random_draw_sequence[i]][0]
-                                color = random.choice(self.selectedBatchColor)
-                                plt.set_color(color)
+                    x1 = self.xmin + x_idx * (self.xmax - self.xmin) / numOfBatch
+                    x2 = self.xmin + (x_idx + 1) * (self.xmax - self.xmin) / numOfBatch
+                    y1 = self.ymin + y_idx * (self.ymax - self.ymin) / numOfBatch
+                    y2 = self.ymin + (y_idx + 1) * (self.ymax - self.ymin) / numOfBatch
+
+                    for i in range(len(self.plots)):
+                        x = self.trajectory[i, 0][0]
+                        y = self.trajectory[i, 1][0]
+                        if (x > x1 and x < x2 and y > y1 and y < y2):
+                            plt = self.plots[self.random_draw_sequence[i]][0]
+                            color = random.choice(self.selectedBatchColor)
+                            plt.set_color(color)
 
             elif(self.selectedAreaPlot is not None):
                 self.selectedAreaColor.append(matplotlib_color)
@@ -1782,17 +1918,16 @@ class Main(QMainWindow, Ui_MainWindow):
     @pyqtSlot('double')
     def valueChanged(self, value):
         if (self.selectedPlot == True):
-            if (self.selectedLine is not None):
-                if (type(self.selectedLine) == int):
-                    plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                    plt.set_linewidth(value)
-                else:
-                    start_line = self.selectedLine[0]
-                    end_line = self.selectedLine[1]
-                    for i in range(len(self.plots)):
-                        if (i >= start_line and i <= end_line):
-                            plt = self.plots[self.random_draw_sequence[i]][0]
-                            plt.set_linewidth(value)
+            if (type(self.pickedLines) == int):
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                plt.set_linewidth(value)
+            elif (self.selectedLine is not None):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
+                for i in range(len(self.plots)):
+                    if (i >= start_line and i <= end_line):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
+                        plt.set_linewidth(value)
             elif (self.selectedAreaPlot is not None):
                 for i in range(len(self.areaPlots[self.selectedAreaPlot])):
                     plt = self.areaPlots[self.selectedAreaPlot][i][0]
@@ -1803,21 +1938,20 @@ class Main(QMainWindow, Ui_MainWindow):
     @pyqtSlot('double')
     def valueAlphaChanged(self, value):
         if (self.selectedPlot == True):
-            if (self.selectedLine is not None):
-                if (type(self.selectedLine) == int):
-                    plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
-                    color = plt.get_color()
-                    color[3] = value
-                    plt.set_color(color)
-                else:
-                    start_line = self.selectedLine[0]
-                    end_line = self.selectedLine[1]
-                    for i in range(len(self.plots)):
-                        if (i >= start_line and i <= end_line):
-                            plt = self.plots[self.random_draw_sequence[i]][0]
-                            color = plt.get_color()
-                            color[3] = value
-                            plt.set_color(color)
+            if (type(self.pickedLines) == int):
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                color = plt.get_color()
+                color[3] = value
+                plt.set_color(color)
+            elif (self.selectedLine is not None):
+                start_line = self.selectedLine[0]
+                end_line = self.selectedLine[1]
+                for i in range(len(self.plots)):
+                    if (i >= start_line and i <= end_line):
+                        plt = self.plots[self.random_draw_sequence[i]][0]
+                        color = plt.get_color()
+                        color[3] = value
+                        plt.set_color(color)
             elif (self.selectedAreaPlot is not None):
                 for i in range(len(self.areaPlots[self.selectedAreaPlot])):
                     plt = self.areaPlots[self.selectedAreaPlot][i][0]
@@ -1829,8 +1963,8 @@ class Main(QMainWindow, Ui_MainWindow):
 
     @pyqtSlot(int)
     def checkedSlot(self, state):
-        if (self.selectedPlot == True and self.selectedLine is not None):
-            plt = self.plots[self.random_draw_sequence[self.selectedLine]][0]
+        if (self.selectedPlot == True and self.pickedLines is not None):
+            plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
             if state == QtCore.Qt.Checked:
                 print ("checked")
                 plt.set_visible(False)
@@ -1854,6 +1988,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.comboBox.clear()
         self.selectedPlot = False
         self.selectedLine = None
+        self.pickedLines = None
 
     def save_plot_data(self, filename, data):
         data = np.save(filename, data)

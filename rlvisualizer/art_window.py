@@ -65,6 +65,8 @@ class Ui_MainWindow(object):
         self.menuPresets.setObjectName(_fromUtf8("menuPresets"))
         self.menuTrajectoryOrder = QtGui.QMenu(self.menubar)
         self.menuTrajectoryOrder.setObjectName(_fromUtf8("menuTrajectoryOrder"))
+        self.deleteLines = QtGui.QMenu(self.menubar)
+        self.deleteLines.setObjectName(_fromUtf8("deleteLines"))
         self.menuAbout = QtGui.QMenu(self.menubar)
         self.menuAbout.setObjectName(_fromUtf8("menuAbout"))
 
@@ -76,14 +78,14 @@ class Ui_MainWindow(object):
         self.open.setObjectName(_fromUtf8("open"))
         self.saveAnimation = QtGui.QAction(MainWindow)
         self.saveAnimation.setObjectName(_fromUtf8("Save Animation"))
-        self.saveVisibleData = QtGui.QAction(MainWindow)
-        self.saveVisibleData.setObjectName(_fromUtf8("Save Visible Data"))
+        self.saveData = QtGui.QAction(MainWindow)
+        self.saveData.setObjectName(_fromUtf8("Save Data"))
         self.exit = QtGui.QAction(MainWindow)
         self.exit.setObjectName(_fromUtf8("exit"))
 
         self.menuFile.addAction(self.open)
         self.menuFile.addAction(self.saveAnimation)
-        self.menuFile.addAction(self.saveVisibleData)
+        self.menuFile.addAction(self.saveData)
         self.menuFile.addAction(self.exit)
 
         self.trainingTimeOrder = QtGui.QAction(MainWindow)
@@ -93,6 +95,12 @@ class Ui_MainWindow(object):
         self.menuTrajectoryOrder.addAction(self.trainingTimeOrder)
         self.menuTrajectoryOrder.addAction(self.locationOrder)
 
+        self.deleteSelectedLine = QtGui.QAction(MainWindow)
+        self.deleteSelectedLine.setObjectName(_fromUtf8("Delete Selected Lines"))
+        self.deleteUnselectedLine = QtGui.QAction(MainWindow)
+        self.deleteUnselectedLine.setObjectName(_fromUtf8("Delete Unselected Lines"))
+        self.deleteLines.addAction(self.deleteSelectedLine)
+        self.deleteLines.addAction(self.deleteUnselectedLine)
 
         self.addTitle = QtGui.QAction(MainWindow)
         self.addTitle.setObjectName(_fromUtf8("Add Title"))
@@ -139,6 +147,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuPresets.menuAction())
         self.menubar.addAction(self.menuTrajectoryOrder.menuAction())
+        self.menubar.addAction(self.deleteLines.menuAction())
         self.menubar.addAction(self.menuAbout.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -151,10 +160,11 @@ class Ui_MainWindow(object):
         self.menuPresets.setTitle(_translate("MainWindow", "Presets", None))
         self.menuAbout.setTitle(_translate("MainWindow", "Help", None))
         self.menuTrajectoryOrder.setTitle(_translate("MainWindow", "Trajectory Order", None))
+        self.deleteLines.setTitle(_translate("MainWindow", "Delete Lines", None))
         self.about.setText(_translate("MainWindow", "About", None))
         self.open.setText(_translate("MainWindow", "Open", None))
         self.saveAnimation.setText(_translate("MainWindow", "Save Animation", None))
-        self.saveVisibleData.setText(_translate("MainWindow", "Save Visible Data", None))
+        self.saveData.setText(_translate("MainWindow", "Save Data", None))
         self.addTitle.setText(_translate("MainWindow", "Add Title", None))
         self.selectArea.setText(_translate("MainWindow", "Select Area", None))
         self.hideFlag.setText(_translate("MainWindow", "Hide Flag", None))
@@ -169,4 +179,5 @@ class Ui_MainWindow(object):
         self.storePresets.setText(_translate("MainWindow", "Restore", None))
         self.locationOrder.setText(_translate("MainWindow", "Location Order", None))
         self.trainingTimeOrder.setText(_translate("MainWindow", "Training Time", None))
-
+        self.deleteSelectedLine.setText(_translate("MainWindow", "Delete Selected Lines", None))
+        self.deleteUnselectedLine.setText(_translate("MainWindow", "Delete Unselected Lines", None))
