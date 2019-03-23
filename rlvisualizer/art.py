@@ -260,6 +260,34 @@ class Main(QMainWindow, Ui_MainWindow):
                 if (self.ymax < y_max_value):
                     self.ymax = y_max_value
 
+        ratioIdx = ChooseRatioDialog(self).getIdx()
+
+        width = self.xmax - self.xmin
+        height = self.ymax - self.ymin
+
+        if (ratioIdx == 0):  # 43
+            top = 4
+            down = 3
+        elif (ratioIdx == 1):  # 32
+            top = 3
+            down = 2
+        elif (ratioIdx == 2):  # 169
+            top = 16
+            down = 9
+        else:  # 11
+            top = 1
+            down = 1
+        if width < height*top/down:
+            middle = (self.xmax + self.xmin) / 2
+            new_width = height*top/down
+            self.xmin = middle - new_width / 2
+            self.xmax = middle + new_width / 2
+        else:
+            middle = (self.ymax + self.ymin) / 2
+            new_height = height * down / top
+            self.ymin = middle - new_height / 2
+            self.ymax = middle + new_height / 2
+
         plt.gca().axes.set_xlim(xmin=self.xmin, xmax=self.xmax)
         plt.gca().axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
 
@@ -726,6 +754,10 @@ class Main(QMainWindow, Ui_MainWindow):
         self.animateBtn.connect(self.animateBtn, SIGNAL("clicked()"), self, SLOT("animateBtnClickedSlot()"))
         self.custom_toolbar.addWidget(self.animateBtn)
 
+        self.deleteLinesBtn = QtGui.QPushButton("Delete Lines")
+        self.deleteLinesBtn.connect(self.deleteLinesBtn, SIGNAL("clicked()"), self, SLOT("deleteSelectedLineSlot()"))
+        self.custom_toolbar.addWidget(self.deleteLinesBtn)
+
         self.resetBtn = QtGui.QPushButton("Reset")
         self.resetBtn.connect(self.resetBtn, SIGNAL("clicked()"), self, SLOT("resetSlot()"))
         self.custom_toolbar.addWidget(self.resetBtn)
@@ -914,7 +946,21 @@ class Main(QMainWindow, Ui_MainWindow):
 
         self.colorSetIdx = 0
 
-        if (self.selectedLine is not None):
+        if (type(self.pickedLines) == int):
+            pass
+        elif (type(self.pickedLines) == list):
+            start_line = self.selectedLine[0]
+            end_line = self.selectedLine[1]
+
+            colors = cm.rainbow(np.linspace(0, 1, len(self.pickedLines)))
+            colors[:, 3] = 1.0
+            j = 0
+            for idx in self.pickedLines:
+                plt = self.plots[self.random_draw_sequence[idx]][0]
+                color = colors[j]
+                plt.set_color(color)
+                j+=1
+        elif (self.selectedLine is not None):
             if (self.trainingOrder == 0):
                 start_line = self.selectedLine[0]
                 end_line = self.selectedLine[1]
@@ -994,7 +1040,39 @@ class Main(QMainWindow, Ui_MainWindow):
         r1, g1, b1 = self.matplotlib_color1[0], self.matplotlib_color1[1], self.matplotlib_color1[2]
         r2, g2, b2 = self.matplotlib_color2[0], self.matplotlib_color2[1], self.matplotlib_color2[2]
 
-        if (self.selectedLine is not None):
+        if (type(self.pickedLines) == int):
+            pass
+        elif(type(self.pickedLines) == list):
+            colors = []
+            steps = len(self.pickedLines)
+            rdelta, gdelta, bdelta = (r2 - r1) / steps, (g2 - g1) / steps, (b2 - b1) / steps
+            for step in range(steps):
+                r1 += rdelta
+                g1 += gdelta
+                b1 += bdelta
+                if (r1 > 1):
+                    r1 = 1
+                if (g1 > 1):
+                    g1 = 1
+                if (b1 > 1):
+                    b1 = 1
+
+                if (r1 < 0):
+                    r1 = 0
+                if (g1 < 0):
+                    g1 = 0
+                if (b1 < 0):
+                    b1 = 0
+
+                colors.append([r1, g1, b1, 1.0])
+
+            j = 0
+            for idx in self.pickedLines:
+                plt = self.plots[self.random_draw_sequence[idx]][0]
+                color = colors[j]
+                plt.set_color(color)
+                j += 1
+        elif (self.selectedLine is not None):
             if (self.trainingOrder == 0):
                 start_line = self.selectedLine[0]
                 end_line = self.selectedLine[1]
@@ -1141,21 +1219,38 @@ class Main(QMainWindow, Ui_MainWindow):
         if (self.selectedPlot == False):
             return
 
-        if (self.checkedArea == True):
-            pass
-        else:
-            if (self.pickedLines is not None):
-                if (type(self.pickedLines) == int):
-                    plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
-                    plt.set_visible(False)
-                    self.deletedLines[self.pickedLines] = True
-                elif (type(self.pickedLines) == list):
-                    for idx in self.pickedLines:
-                        plt = self.plots[self.random_draw_sequence[idx]][0]
-                        plt.set_visible(False)
-                        self.deletedLines[idx] = True
+        if (self.selectedAreaPlot is not None):
+            for j in range(len(self.areaPlots[self.selectedAreaPlot])):
+                plt = self.areaPlots[self.selectedAreaPlot][j][0]
+                idx = int(plt.get_label().replace("_line", ""))
+                plt.set_visible(False)
+                self.deletedLines[idx] = True
 
-                self.pickedLines = None
+                del self.areaPlots[self.selectedAreaPlot]
+                self.selectedAreaPlot = None
+
+        elif (self.pickedLines is not None):
+            if (type(self.pickedLines) == int):
+                plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
+                plt.set_visible(False)
+                self.deletedLines[self.pickedLines] = True
+            elif (type(self.pickedLines) == list):
+                for idx in self.pickedLines:
+                    plt = self.plots[self.random_draw_sequence[idx]][0]
+                    plt.set_visible(False)
+                    self.deletedLines[idx] = True
+            self.pickedLines = None
+        elif(self.selectedLine is not None):
+            start_line = self.selectedLine[0]
+            end_line = self.selectedLine[1]
+            i = start_line
+            while i <= end_line:
+                if (self.deletedLines[i] == False):
+                    plt = self.plots[self.random_draw_sequence[i]][0]
+                    plt.set_visible(False)
+                    self.deletedLines[i] = True
+
+                i += 1
 
         self.leftTreeWidget.clear()
         self.treeWidget.clear()
@@ -1170,11 +1265,14 @@ class Main(QMainWindow, Ui_MainWindow):
 
         if (self.pickedLines is not None):
             if (type(self.pickedLines) == int):
-                for i in range(len(self.plots)):
+                start_line, end_line = self.get_start_end(self.comboBox.currentIndex())
+                i = start_line
+                while i <= end_line:
                     if(i != self.pickedLines):
                         plt = self.plots[self.random_draw_sequence[i]][0]
                         plt.set_visible(False)
                         self.deletedLines[i] = True
+                    i += 1
             elif (type(self.pickedLines) == list):
                 start_line, end_line = self.get_start_end(self.comboBox.currentIndex())
                 i = start_line
@@ -1184,8 +1282,8 @@ class Main(QMainWindow, Ui_MainWindow):
                         plt.set_visible(False)
                         self.deletedLines[i] = True
                     i += 1
-            else:
-                pass
+        elif(self.selectedLine is not None):
+            pass
 
         self.leftTreeWidget.clear()
         self.treeWidget.clear()
@@ -1781,7 +1879,35 @@ class Main(QMainWindow, Ui_MainWindow):
                 self.colorBtn.connect(self.colorBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
                 self.treeWidget.setItemWidget(item, 1, self.colorBtn)
             elif (type(self.pickedLines) == list):
-                pass
+                plt = self.plots[self.random_draw_sequence[self.pickedLines[0]]][0]
+
+                # Thickness
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Thickness")
+                self.lineSpinBox = QtGui.QDoubleSpinBox()
+                self.lineSpinBox.setValue(plt.get_linewidth())
+                self.lineSpinBox.setMaximum(200)
+                QObject.connect(self.lineSpinBox, SIGNAL("valueChanged(double)"), self, SLOT("valueChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.lineSpinBox)
+
+                # Alpha
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Alpha")
+                self.alphaSpinBox = QtGui.QDoubleSpinBox()
+                self.alphaSpinBox.setMaximum(1.0)
+                self.alphaSpinBox.setMinimum(0.1)
+                self.alphaSpinBox.setValue(self.alphaValue)
+                QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
+                                SLOT("valueAlphaChanged(double)"))
+                self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
+
+                # Color
+                item = QtGui.QTreeWidgetItem(self.treeWidget)
+                item.setText(0, "Color")
+                self.colorBtn = QtGui.QPushButton()
+                self.colorBtn.connect(self.colorBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
+                self.treeWidget.setItemWidget(item, 1, self.colorBtn)
+
             elif(self.selectedLine is not None):
                 start_line = self.selectedLine[0]
                 end_line = self.selectedLine[1]
@@ -1849,11 +1975,15 @@ class Main(QMainWindow, Ui_MainWindow):
             matplotlib_color.append(255.0)
             matplotlib_color = np.array(matplotlib_color) / 255.0
 
-
             if (type(self.pickedLines) == int):
                 self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color.name())
                 plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
                 plt.set_color(matplotlib_color)
+            elif(type(self.pickedLines) == list):
+                self.colorBtn.setStyleSheet("QWidget { background-color: %s}" % color.name())
+                for idx in self.pickedLines:
+                    plt = self.plots[self.random_draw_sequence[idx]][0]
+                    plt.set_color(matplotlib_color)
             elif (self.selectedLine is not None):
                 self.selectedBatchColor.append(matplotlib_color)
 
@@ -1921,6 +2051,10 @@ class Main(QMainWindow, Ui_MainWindow):
             if (type(self.pickedLines) == int):
                 plt = self.plots[self.random_draw_sequence[self.pickedLines]][0]
                 plt.set_linewidth(value)
+            elif(type(self.pickedLines) == list):
+                for idx in self.pickedLines:
+                    plt = self.plots[self.random_draw_sequence[idx]][0]
+                    plt.set_linewidth(value)
             elif (self.selectedLine is not None):
                 start_line = self.selectedLine[0]
                 end_line = self.selectedLine[1]
@@ -1943,6 +2077,12 @@ class Main(QMainWindow, Ui_MainWindow):
                 color = plt.get_color()
                 color[3] = value
                 plt.set_color(color)
+            elif(type(self.pickedLines) == list):
+                for idx in self.pickedLines:
+                    plt = self.plots[self.random_draw_sequence[idx]][0]
+                    color = plt.get_color()
+                    color[3] = value
+                    plt.set_color(color)
             elif (self.selectedLine is not None):
                 start_line = self.selectedLine[0]
                 end_line = self.selectedLine[1]
@@ -2015,16 +2155,52 @@ class AddTitleDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    # get current date and time from the dialog
     def getTile(self):
         return self.title.text()
 
-    # static method to create the dialog and return (date, time, accepted)
     @staticmethod
     def getTitle(parent=None):
         dialog = AddTitleDialog(parent)
         dialog.exec_()
         return dialog.getTile()
+
+class ChooseRatioDialog(QDialog):
+    def __init__(self, parent=None):
+        super(ChooseRatioDialog, self).__init__(parent)
+
+        layout = QVBoxLayout(self)
+
+        self.comboBox = QComboBox()
+        self.comboBox.addItem("4:3")
+        self.comboBox.addItem("3:2")
+        self.comboBox.addItem("16:9")
+        self.comboBox.addItem("1:1")
+        self.comboBox.setCurrentIndex(0)
+        # self.comboBox.connect(self.comboBox,
+        #                       SIGNAL("currentIndexChanged(int)"),
+        #                       self, SLOT("ratioIndexChange(int)"))
+        layout.addWidget(self.comboBox)
+
+        # OK and Cancel buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok,
+            Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    # @pyqtSlot(int)
+    # def ratioIndexChange(self, idx):
+    #     pass
+
+    def getRatioIdx(self):
+        return self.comboBox.currentIndex()
+
+    @staticmethod
+    def getIdx(parent=None):
+        dialog = ChooseRatioDialog(parent)
+        dialog.exec_()
+        return dialog.getRatioIdx()
 
 if __name__ == '__main__':
     import sys
