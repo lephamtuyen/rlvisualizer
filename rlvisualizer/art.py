@@ -62,6 +62,8 @@ class Main(QMainWindow, Ui_MainWindow):
 
         self.leftTreeWidget.setColumnCount(2)
         self.leftTreeWidget.setHeaderLabels(HEADERS)
+        selmodel = self.leftTreeWidget.selectionModel()
+        selmodel.selectionChanged.connect(self.handleSelection)
 
         self.fig = plt.figure()
         self.plots = None
@@ -1226,8 +1228,8 @@ class Main(QMainWindow, Ui_MainWindow):
                 plt.set_visible(False)
                 self.deletedLines[idx] = True
 
-                del self.areaPlots[self.selectedAreaPlot]
-                self.selectedAreaPlot = None
+            del self.areaPlots[self.selectedAreaPlot]
+            self.selectedAreaPlot = None
 
         elif (self.pickedLines is not None):
             if (type(self.pickedLines) == int):
@@ -1815,19 +1817,20 @@ class Main(QMainWindow, Ui_MainWindow):
             self.canvas.draw()
 
     def handleSelection(self, selected, deselected):
-        for index in selected.indexes():
-            self.selectedAreaPlot = int(index.row())
-            self.selectedAreaColor = self.selectedAreaColors[self.selectedAreaPlot]
-            self.updateSelectedAreaPlots()
-            self.treeWidget.clear()
-            self.addTreeWidgetItems()
-            item = self.treeWidget.itemFromIndex(index)
-            print('SEL: row: %s, col: %s, text: %s' % (
-                index.row(), index.column(), item.text(0)))
-        for index in deselected.indexes():
-            item = self.treeWidget.itemFromIndex(index)
-            print('DESEL: row: %s, col: %s, text: %s' % (
-                index.row(), index.column(), item.text(0)))
+        if (self.checkedArea == True):
+            for index in selected.indexes():
+                self.selectedAreaPlot = int(index.row())
+                self.selectedAreaColor = self.selectedAreaColors[self.selectedAreaPlot]
+                self.updateSelectedAreaPlots()
+                self.treeWidget.clear()
+                self.addTreeWidgetItems()
+                item = self.treeWidget.itemFromIndex(index)
+                print('SEL: row: %s, col: %s, text: %s' % (
+                    index.row(), index.column(), item.text(0)))
+            for index in deselected.indexes():
+                item = self.treeWidget.itemFromIndex(index)
+                print('DESEL: row: %s, col: %s, text: %s' % (
+                    index.row(), index.column(), item.text(0)))
 
     def addTreeWidgetItems(self):
         if (self.selectedPlot == True):
