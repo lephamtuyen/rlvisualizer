@@ -207,10 +207,25 @@ class Main(QMainWindow, Ui_MainWindow):
 
         self.statusBar.showMessage(filepath)
 
+        set_min_max = False
         data = self.restore_plot_data(str(filepath))
-        self.trajectory = np.asarray(data[0])
-        self.goal = data[1][0]
-        self.radius = data[1][1]
+        if (len(data) > 2):
+            self.trajectory = data
+            self.goal = None
+            self.radius = None
+            set_min_max = True
+        else:
+            self.trajectory = np.asarray(data[0])
+            self.goal = data[1][0]
+            self.radius = data[1][1]
+
+            if (len(data[1]) > 2):
+                self.xmin = data[1][2]
+                self.xmax = data[1][3]
+                self.ymin = data[1][4]
+                self.ymax = data[1][5]
+            else:
+                set_min_max = True
 
         plt.style.use('bmh')
         mpl.rcParams['xtick.labelsize'] = 5
@@ -230,10 +245,11 @@ class Main(QMainWindow, Ui_MainWindow):
         colors = self.assignColorSet()
         self.random_draw_sequence = np.random.permutation(range(self.trajectory.shape[0]))
 
-        self.xmin = 10000
-        self.ymin = 10000
-        self.xmax = -10000
-        self.ymax = -10000
+        if (set_min_max == True):
+            self.xmin = 10000
+            self.ymin = 10000
+            self.xmax = -10000
+            self.ymax = -10000
         for episode in range(self.trajectory.shape[0]):
             current_plot = plt.plot(
                 self.trajectory[episode, 0],
@@ -241,57 +257,71 @@ class Main(QMainWindow, Ui_MainWindow):
             current_plot[0].set_color(colors[episode])
             self.plots[self.random_draw_sequence[episode]] = current_plot
 
-            x_values = self.trajectory[episode, 0]
-            y_values = self.trajectory[episode, 1]
+            if (set_min_max == True):
+                x_values = self.trajectory[episode, 0]
+                y_values = self.trajectory[episode, 1]
 
-            if (len(x_values) > 0):
-                x_min_value = np.min(x_values)
-                if (self.xmin > x_min_value):
-                    self.xmin = x_min_value
+                if (len(x_values) > 0):
+                    x_min_value = np.min(x_values)
+                    if (self.xmin > x_min_value):
+                        self.xmin = x_min_value
 
-                x_max_value = np.max(x_values)
-                if (self.xmax < x_max_value):
-                    self.xmax = x_max_value
+                    x_max_value = np.max(x_values)
+                    if (self.xmax < x_max_value):
+                        self.xmax = x_max_value
 
-            if (len(y_values) > 0):
-                y_min_value = np.min(y_values)
-                if (self.ymin > y_min_value):
-                    self.ymin = y_min_value
+                if (len(y_values) > 0):
+                    y_min_value = np.min(y_values)
+                    if (self.ymin > y_min_value):
+                        self.ymin = y_min_value
 
-                y_max_value = np.max(y_values)
-                if (self.ymax < y_max_value):
-                    self.ymax = y_max_value
+                    y_max_value = np.max(y_values)
+                    if (self.ymax < y_max_value):
+                        self.ymax = y_max_value
 
-        ratioIdx = ChooseRatioDialog(self).getIdx()
+        # if (set_min_max == True):
+        #     ratioIdx = ChooseRatioDialog(self).getIdx()
+        #
+        #     width = self.xmax - self.xmin
+        #     height = self.ymax - self.ymin
+        #
+        #     if (ratioIdx == 0):  # 43
+        #         top = 4
+        #         down = 3
+        #     elif (ratioIdx == 1):  # 34
+        #         top = 3
+        #         down = 4
+        #     elif (ratioIdx == 2):  # 32
+        #         top = 3
+        #         down = 2
+        #     elif (ratioIdx == 3):  # 32
+        #         top = 2
+        #         down = 3
+        #     elif (ratioIdx == 4):  # 169
+        #         top = 16
+        #         down = 9
+        #     elif (ratioIdx == 5):  # 169
+        #         top = 9
+        #         down = 16
+        #     else:  # 11
+        #         top = 1
+        #         down = 1
+        #
+        #     self.ratio = top / down
+        #
+        #     if width < height*top/down:
+        #         middle = (self.xmax + self.xmin) / 2
+        #         new_width = height*top/down
+        #         self.xmin = middle - new_width / 2
+        #         self.xmax = middle + new_width / 2
+        #     else:
+        #         middle = (self.ymax + self.ymin) / 2
+        #         new_height = height * down / top
+        #         self.ymin = middle - new_height / 2
+        #         self.ymax = middle + new_height / 2
 
-        width = self.xmax - self.xmin
-        height = self.ymax - self.ymin
-
-        if (ratioIdx == 0):  # 43
-            top = 4
-            down = 3
-        elif (ratioIdx == 1):  # 32
-            top = 3
-            down = 2
-        elif (ratioIdx == 2):  # 169
-            top = 16
-            down = 9
-        else:  # 11
-            top = 1
-            down = 1
-        if width < height*top/down:
-            middle = (self.xmax + self.xmin) / 2
-            new_width = height*top/down
-            self.xmin = middle - new_width / 2
-            self.xmax = middle + new_width / 2
-        else:
-            middle = (self.ymax + self.ymin) / 2
-            new_height = height * down / top
-            self.ymin = middle - new_height / 2
-            self.ymax = middle + new_height / 2
-
-        plt.gca().axes.set_xlim(xmin=self.xmin, xmax=self.xmax)
-        plt.gca().axes.set_ylim(ymin=self.ymin, ymax=self.ymax)
+        plt.gca().axes.set_xlim(left=self.xmin, right=self.xmax)
+        plt.gca().axes.set_ylim(bottom=self.ymin, top=self.ymax)
 
         self.authorAnnotate = plt.gca().axes.annotate('Designed by Chung TaeChoong (tcchung@khu.ac.kr) and Le Pham Tuyen (tuyenple@khu.ac.kr) Dept. of Computer Engineering, KyungHee University',
                                 xy=(0.5, 0), xycoords='axes fraction',
@@ -713,7 +743,7 @@ class Main(QMainWindow, Ui_MainWindow):
         if (x is not None): # 800, 725
             self.canvas.setFixedSize(x, y)
             new_ratio = x / y
-            if (new_ratio > 0):
+            if (new_ratio >= 0):
                 self.canvas.setFixedSize(700.,700./new_ratio)
             else:
                 self.canvas.setFixedSize(600 * new_ratio, 600)
@@ -759,6 +789,10 @@ class Main(QMainWindow, Ui_MainWindow):
         self.deleteLinesBtn = QtGui.QPushButton("Delete Lines")
         self.deleteLinesBtn.connect(self.deleteLinesBtn, SIGNAL("clicked()"), self, SLOT("deleteSelectedLineSlot()"))
         self.custom_toolbar.addWidget(self.deleteLinesBtn)
+
+        self.deleteUnselectedLinesBtn = QtGui.QPushButton("Delete Unselected Lines")
+        self.deleteUnselectedLinesBtn.connect(self.deleteUnselectedLinesBtn, SIGNAL("clicked()"), self, SLOT("deleteUnselectedLineSlot()"))
+        self.custom_toolbar.addWidget(self.deleteUnselectedLinesBtn)
 
         self.resetBtn = QtGui.QPushButton("Reset")
         self.resetBtn.connect(self.resetBtn, SIGNAL("clicked()"), self, SLOT("resetSlot()"))
@@ -1221,7 +1255,7 @@ class Main(QMainWindow, Ui_MainWindow):
         if (self.selectedPlot == False):
             return
 
-        if (self.selectedAreaPlot is not None):
+        if (self.checkedArea == True and self.selectedAreaPlot is not None):
             for j in range(len(self.areaPlots[self.selectedAreaPlot])):
                 plt = self.areaPlots[self.selectedAreaPlot][j][0]
                 idx = int(plt.get_label().replace("_line", ""))
@@ -1247,10 +1281,9 @@ class Main(QMainWindow, Ui_MainWindow):
             end_line = self.selectedLine[1]
             i = start_line
             while i <= end_line:
-                if (self.deletedLines[i] == False):
-                    plt = self.plots[self.random_draw_sequence[i]][0]
-                    plt.set_visible(False)
-                    self.deletedLines[i] = True
+                plt = self.plots[self.random_draw_sequence[i]][0]
+                plt.set_visible(False)
+                self.deletedLines[i] = True
 
                 i += 1
 
@@ -1265,7 +1298,22 @@ class Main(QMainWindow, Ui_MainWindow):
         if (self.selectedPlot == False):
             return
 
-        if (self.pickedLines is not None):
+        if (self.checkedArea == True and self.selectedAreaPlot is not None):
+            # Keep lines
+            keep_lines = []
+            for j in range(len(self.areaPlots[self.selectedAreaPlot])):
+                plt = self.areaPlots[self.selectedAreaPlot][j][0]
+                idx = int(plt.get_label().replace("_line", ""))
+                keep_lines.append(idx)
+
+            for i in range(len(self.plots)):
+                if (i not in keep_lines):
+                    plt = self.plots[self.random_draw_sequence[i]][0]
+                    plt.set_visible(False)
+                    self.deletedLines[i] = True
+
+            self.areaPlots = [self.areaPlots[self.selectedAreaPlot]]
+        elif (self.pickedLines is not None):
             if (type(self.pickedLines) == int):
                 start_line, end_line = self.get_start_end(self.comboBox.currentIndex())
                 i = start_line
@@ -1285,7 +1333,15 @@ class Main(QMainWindow, Ui_MainWindow):
                         self.deletedLines[i] = True
                     i += 1
         elif(self.selectedLine is not None):
-            pass
+            start_line = self.selectedLine[0]
+            end_line = self.selectedLine[1]
+            for i in range(len(self.plots)):
+                if i < start_line or i > end_line:
+                    plt = self.plots[self.random_draw_sequence[i]][0]
+                    plt.set_visible(False)
+                    self.deletedLines[i] = True
+
+                    i += 1
 
         self.leftTreeWidget.clear()
         self.treeWidget.clear()
@@ -1504,7 +1560,29 @@ class Main(QMainWindow, Ui_MainWindow):
             if (self.deletedLines[episode] == False):
                 data.append(self.trajectory[episode, :])
 
-        self.save_plot_data(filePath, [data, [np.array([self.goal[0],self.goal[1]]), self.radius]])
+        if (self.goal is None):
+            self.save_plot_data(filePath, [data, [None,
+                                                  None,
+                                                  self.xmin,
+                                                  self.xmax,
+                                                  self.ymin,
+                                                  self.ymax]])
+        else:
+            self.save_plot_data(filePath, [data, [np.array([self.goal[0], self.goal[1]]),
+                                                  self.radius,
+                                                  self.xmin,
+                                                  self.xmax,
+                                                  self.ymin,
+                                                  self.ymax]])
+
+        # xlim = plt.gca().axes.get_xlim()
+        # ylim = plt.gca().axes.get_ylim()
+        # self.save_plot_data(filePath, [data, [np.array([self.goal[0],self.goal[1]]),
+        #                                       self.radius,
+        #                                       xlim[0],
+        #                                       xlim[1],
+        #                                       ylim[0],
+        #                                       ylim[1]]])
 
     @pyqtSlot()
     def restorePresets(self):
@@ -1591,8 +1669,8 @@ class Main(QMainWindow, Ui_MainWindow):
 
             self.treeWidget.clear()
             self.addTreeWidgetItems()
-            self.leftTreeWidget.clear()
-            self.refreshLeftTreeWidgetItems()
+            # self.leftTreeWidget.clear()
+            # self.refreshLeftTreeWidgetItems()
             self.selectedAreaPlot = None
 
             self.setupComboBox()
@@ -1789,20 +1867,21 @@ class Main(QMainWindow, Ui_MainWindow):
                 self.leftTreeWidget.setItemSelected(self.leftTreeWidget.topLevelItem(self.selectedAreaPlot), True)
                 self.updateSelectedAreaPlots()
         else:
-            if (self.selectedLine is not None):
-                start_line = self.selectedLine[0]
-                end_line = self.selectedLine[1]
-                i = start_line
-                while i <= end_line:
-                    if (self.deletedLines[i] == False):
-                        # Line number
-                        item = QtGui.QTreeWidgetItem(self.leftTreeWidget)
-                        item.setText(0, "Line")
-
-                        lineNumber = QtGui.QLabel(str(i))
-                        self.leftTreeWidget.setItemWidget(item, 1, lineNumber)
-
-                    i += 1
+            pass
+            # if (self.selectedLine is not None):
+            #     start_line = self.selectedLine[0]
+            #     end_line = self.selectedLine[1]
+            #     i = start_line
+            #     while i <= end_line:
+            #         if (self.deletedLines[i] == False):
+            #             # Line number
+            #             item = QtGui.QTreeWidgetItem(self.leftTreeWidget)
+            #             item.setText(0, "Line")
+            #
+            #             lineNumber = QtGui.QLabel(str(i))
+            #             self.leftTreeWidget.setItemWidget(item, 1, lineNumber)
+            #
+            #         i += 1
 
     def updateSelectedAreaPlots(self):
         if (self.selectedAreaPlot is not None):
@@ -2139,7 +2218,6 @@ class Main(QMainWindow, Ui_MainWindow):
 
     def restore_plot_data(self, filename):
         data = np.load(filename, encoding='latin1')
-        print("Successfully load the data at path %s" % filename)
         return data
 
 class AddTitleDialog(QDialog):
@@ -2175,8 +2253,11 @@ class ChooseRatioDialog(QDialog):
 
         self.comboBox = QComboBox()
         self.comboBox.addItem("4:3")
+        self.comboBox.addItem("3:4")
         self.comboBox.addItem("3:2")
+        self.comboBox.addItem("2:3")
         self.comboBox.addItem("16:9")
+        self.comboBox.addItem("9:16")
         self.comboBox.addItem("1:1")
         self.comboBox.setCurrentIndex(0)
         # self.comboBox.connect(self.comboBox,
