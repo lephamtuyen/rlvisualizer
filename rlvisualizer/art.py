@@ -91,7 +91,7 @@ class Main(QMainWindow, Ui_MainWindow):
 
         self.selectedBatchColors = []
         self.selectedBatchColor = []
-
+        self.colorBtns = []
         self.areaPlots = []
         self.areaTrajectories = []
         self.selectedAreaColor = []
@@ -206,6 +206,10 @@ class Main(QMainWindow, Ui_MainWindow):
             return
 
         self.statusBar.showMessage(filepath)
+
+        dir = os.path.dirname(str(filepath))
+        mpl.rcParams["savefig.directory"] = dir
+        mpl.rcParams["savefig.format"] = "pdf"
 
         set_min_max = False
         data = self.restore_plot_data(str(filepath))
@@ -526,19 +530,20 @@ class Main(QMainWindow, Ui_MainWindow):
                     color = random.choice(self.selectedBatchColor)
                     self.plots[self.random_draw_sequence[i]][0].set_color(color)
 
-            self.canvas.draw()
-
+            self.colorSetIdx = 2
             self.areaPlots = []
             self.areaTrajectories = []
-
             self.selectedAreaColors = []
             self.selectedAreaColor = []
 
+            self.hideFlagMode()
             self.treeWidget.clear()
             self.addTreeWidgetItems()
             self.leftTreeWidget.clear()
             self.refreshLeftTreeWidgetItems()
             self.selectedAreaPlot = None
+
+            self.canvas.draw()
 
     def updateBackgroundColor(self):
         plt.style.use('bmh')
@@ -674,6 +679,7 @@ class Main(QMainWindow, Ui_MainWindow):
     @pyqtSlot()
     def slotOpen(self):
         dir = os.path.dirname(str(self.openFilePath))
+        filename = os.path.basename(str(self.openFilePath))
         filepath = QtGui.QFileDialog.getOpenFileName(self,
                                                      'Open File',
                                                      dir,
@@ -707,23 +713,19 @@ class Main(QMainWindow, Ui_MainWindow):
                     self.treeWidget.clear()
             self.pickedLines = None
 
-        if (len(self.areaPlots) == 0):
-            visible = False
-        else:
-            visible = True
-
         areaPlot = []
         areaTrajectory = []
         for i in range(len(self.plots)):
-            x = self.trajectory[i, 0][0]
-            y = self.trajectory[i, 1][0]
-            if (x > x1 and x < x2 and y > y1 and y < y2):
-                areaPlot.append(self.plots[self.random_draw_sequence[i]])
-                areaTrajectory.append(self.trajectory[i])
-                self.plots[self.random_draw_sequence[i]][0].set_visible(True)
-            else:
-                if (visible == False):
-                    self.plots[self.random_draw_sequence[i]][0].set_visible(False)
+            if self.deletedLines[i]==False:
+                x = self.trajectory[i, 0][0]
+                y = self.trajectory[i, 1][0]
+                if (x > x1 and x < x2 and y > y1 and y < y2):
+                    areaPlot.append(self.plots[self.random_draw_sequence[i]])
+                    areaTrajectory.append(self.trajectory[i])
+                    self.plots[self.random_draw_sequence[i]][0].set_visible(True)
+                    color = self.plots[self.random_draw_sequence[i]][0].get_color()
+                    color[3] = 1.0
+                    self.plots[self.random_draw_sequence[i]][0].set_color(color)
 
         self.areaPlots.append(areaPlot)
         self.areaTrajectories.append(areaTrajectory)
@@ -1401,11 +1403,19 @@ class Main(QMainWindow, Ui_MainWindow):
         self.refreshLeftTreeWidgetItems()
 
         for i in range(len(self.plots)):
-            self.plots[self.random_draw_sequence[i]][0].set_visible(False)
+            if self.deletedLines[i] == False:
+                self.plots[self.random_draw_sequence[i]][0].set_visible(True)
+                self.plots[self.random_draw_sequence[i]][0].set_linewidth(1.0)
+                self.plots[self.random_draw_sequence[i]][0].set_linestyle('solid')
+                color = self.plots[self.random_draw_sequence[i]][0].get_color()
+                color[3] = 0.1
+                self.plots[self.random_draw_sequence[i]][0].set_color(color)
 
         for areaPlot in self.areaPlots:
             for i in range(len(areaPlot)):
-                areaPlot[i][0].set_visible(True)
+                color = areaPlot[i][0].get_color()
+                color[3] = 1.0
+                areaPlot[i][0].set_color(color)
 
     def unselectAreaMode(self):
         self.selectArea.setText("Select Area")
@@ -1663,6 +1673,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.selectedAreaColors = []
             self.selectedBatchColor = []
             self.selectedAreaColor = []
+            self.colorBtns = []
             self.pickColor.idx = 0
             self.colorSetIdx = 0
             self.trainingOrder = 0
@@ -2023,6 +2034,40 @@ class Main(QMainWindow, Ui_MainWindow):
                                 SLOT("valueAlphaChanged(double)"))
                 self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
 
+                # Color
+                if (self.colorSetIdx == 0):
+                    # Color
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "Rainbow colors")
+                    self.treeWidget.setItemWidget(item, 1, None)
+                elif (self.colorSetIdx == 1):
+                    # Color
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "Begin")
+                    beginBtn = QtGui.QPushButton()
+                    beginBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(self.matplotlib_color1))
+                    self.treeWidget.setItemWidget(item, 1, beginBtn)
+
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "End")
+                    endBtn = QtGui.QPushButton()
+                    endBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(self.matplotlib_color2))
+                    self.treeWidget.setItemWidget(item, 1, endBtn)
+                else:
+                    counter = 0
+                    for color in self.selectedBatchColor:
+                        # Color
+                        item = QtGui.QTreeWidgetItem(self.treeWidget)
+                        item.setText(0, "Color " + str(counter + 1))
+
+                        coBtn = QtGui.QPushButton(str(counter+1), self)
+                        coBtn.color_idx = counter
+                        coBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(color))
+                        coBtn.connect(coBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
+                        self.treeWidget.setItemWidget(item, 1, coBtn)
+
+                        counter += 1
+
             elif(self.selectedAreaPlot is not None):
                 # Thickness
                 item = QtGui.QTreeWidgetItem(self.treeWidget)
@@ -2043,6 +2088,40 @@ class Main(QMainWindow, Ui_MainWindow):
                 QObject.connect(self.alphaSpinBox, SIGNAL("valueChanged(double)"), self,
                                 SLOT("valueAlphaChanged(double)"))
                 self.treeWidget.setItemWidget(item, 1, self.alphaSpinBox)
+
+                # Color
+                if (self.colorSetIdx == 0):
+                    # Color
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "Rainbow colors")
+                    self.treeWidget.setItemWidget(item, 1, None)
+                elif (self.colorSetIdx == 1):
+                    # Color
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "Begin")
+                    beginBtn = QtGui.QPushButton()
+                    beginBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(self.matplotlib_color1))
+                    self.treeWidget.setItemWidget(item, 1, beginBtn)
+
+                    item = QtGui.QTreeWidgetItem(self.treeWidget)
+                    item.setText(0, "End")
+                    endBtn = QtGui.QPushButton()
+                    endBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(self.matplotlib_color2))
+                    self.treeWidget.setItemWidget(item, 1, endBtn)
+                else:
+                    counter = 0
+                    for color in self.selectedAreaColor:
+                        # Color
+                        item = QtGui.QTreeWidgetItem(self.treeWidget)
+                        item.setText(0, "Color " + str(counter + 1))
+
+                        coBtn = QtGui.QPushButton(str(counter+1), self)
+                        coBtn.color_idx = counter
+                        coBtn.setStyleSheet("QWidget { background-color: %s}" % rgb2hex(color))
+                        coBtn.connect(coBtn, SIGNAL("clicked()"), self, SLOT("pickColorSlot()"))
+                        self.treeWidget.setItemWidget(item, 1, coBtn)
+
+                        counter += 1
 
     @pyqtSlot()
     def pickColorSlot(self):
@@ -2067,9 +2146,12 @@ class Main(QMainWindow, Ui_MainWindow):
                     plt = self.plots[self.random_draw_sequence[idx]][0]
                     plt.set_color(matplotlib_color)
             elif (self.selectedLine is not None):
-                self.selectedBatchColor.append(matplotlib_color)
-
                 if (self.trainingOrder == 0):
+                    if hasattr(self.sender(), 'color_idx'):
+                        self.selectedBatchColor[self.sender().color_idx] = matplotlib_color
+                    else:
+                        self.selectedBatchColor.append(matplotlib_color)
+
                     start_line = self.selectedLine[0]
                     end_line = self.selectedLine[1]
                     for i in range(len(self.plots)):
@@ -2077,6 +2159,7 @@ class Main(QMainWindow, Ui_MainWindow):
                             plt = self.plots[self.random_draw_sequence[i]][0]
                             color = random.choice(self.selectedBatchColor)
                             plt.set_color(color)
+
                 elif(self.trainingOrder == 1):
                     numOfBatch = self.batchSpinBox.value()
                     idx = self.selectedLine[0]
@@ -2101,7 +2184,10 @@ class Main(QMainWindow, Ui_MainWindow):
                             plt.set_color(color)
 
             elif(self.selectedAreaPlot is not None):
-                self.selectedAreaColor.append(matplotlib_color)
+                if hasattr(self.sender(), 'color_idx'):
+                    self.selectedAreaColor[self.sender().color_idx] = matplotlib_color
+                else:
+                    self.selectedAreaColor.append(matplotlib_color)
 
                 for i in range(len(self.areaPlots[self.selectedAreaPlot])):
                     plt = self.areaPlots[self.selectedAreaPlot][i][0]
@@ -2109,6 +2195,8 @@ class Main(QMainWindow, Ui_MainWindow):
                     plt.set_color(color)
 
             self.canvas.draw()
+            self.treeWidget.clear()
+            self.addTreeWidgetItems()
 
     @pyqtSlot()
     def pickBackgroundColorSlot(self):

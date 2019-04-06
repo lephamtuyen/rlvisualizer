@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/art.py" description="                start_line = self.selectedLine[0]&#10;..." line="1279" />
+    <bookmark url="file://$PROJECT_DIR$/art.py" description="                start_line = self.selectedLine[0]&#10;..." line="1281" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="016a6fc3-3475-494b-b5c0-577419e96e05" name="Default" comment="" />
@@ -17,21 +17,11 @@
       <file leaf-file-name="art.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/art.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="19">
-              <caret line="1556" column="0" lean-forward="true" selection-start-line="1556" selection-start-column="0" selection-end-line="1556" selection-end-column="0" />
+            <state relative-caret-position="437">
+              <caret line="554" column="0" lean-forward="true" selection-start-line="554" selection-start-column="0" selection-end-line="554" selection-end-column="0" />
               <folding>
                 <element signature="e#0#37#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_base.py" pinned="false" current-in-tab="false">
-        <entry file="file://C:/ProgramData/Anaconda3/envs/tuyenple/Lib/site-packages/matplotlib/axes/_base.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-357">
-              <caret line="3100" column="8" lean-forward="false" selection-start-line="3100" selection-start-column="8" selection-end-line="3100" selection-end-column="8" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -40,27 +30,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>pickCo</find>
-      <find>deleteSelectedLineSlot</find>
-      <find>self.selectedLine is not None</find>
-      <find>delete</find>
-      <find>Area</find>
-      <find>self.selectedAreaPlot is not None</find>
-      <find>len(self.areaPlots</find>
-      <find>selectAreaSlot</find>
-      <find>selectedBox</find>
-      <find>title</find>
-      <find>box</find>
-      <find>comboBox</find>
-      <find>currentIndexChanged</find>
-      <find>comboBoxIndexChange</find>
-      <find>Ratio</find>
-      <find>self.comboBox</find>
-      <find>AddTitleDialog</find>
-      <find>addTitleSlot</find>
-      <find>ChooseRatioDialog</find>
-      <find>self.colorBtn</find>
-      <find>pickColorSlot</find>
       <find>selectedAreaPlot</find>
       <find>handleSelection</find>
       <find>Successfully load the data</find>
@@ -68,8 +37,29 @@
       <find>deleteUnselectedLineSlot</find>
       <find>open</find>
       <find>slotOpen</find>
-      <find>save</find>
       <find>self.goal</find>
+      <find>saveFileSlot</find>
+      <find>openFile</find>
+      <find>openFileFromPath</find>
+      <find>matplotlib_color1</find>
+      <find>selectedBatchColor</find>
+      <find>selectAreaSlo</find>
+      <find>set_linestyle</find>
+      <find>alpha</find>
+      <find>valueAlphaChanged</find>
+      <find>selectAreaSlot</find>
+      <find>area</find>
+      <find>selectAreaslot</find>
+      <find>deleteSelectedLineSlot</find>
+      <find>pickColor</find>
+      <find>pickColorSlot</find>
+      <find>save</find>
+      <find>savePresets</find>
+      <find>restore</find>
+      <find>restorePresets</find>
+      <find>self.flags</find>
+      <find>usingP</find>
+      <find>hideFlagMode</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -101,8 +91,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
-      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -114,6 +102,8 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
+      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -177,11 +167,11 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24080664" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.18623962" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3262159" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.29774615" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -200,8 +190,8 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/art.py</url>
-          <line>1300</line>
-          <option name="timeStamp" value="58" />
+          <line>538</line>
+          <option name="timeStamp" value="76" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-dialog>
@@ -214,7 +204,7 @@
           </properties>
         </breakpoint>
       </default-breakpoints>
-      <option name="time" value="64" />
+      <option name="time" value="77" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
@@ -223,6 +213,24 @@
     </watches-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/art.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#37#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/ProgramData/Anaconda3/envs/tuyenple/Lib/site-packages/matplotlib/axes/_base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="96100">
+          <caret line="3100" column="8" lean-forward="false" selection-start-line="3100" selection-start-column="8" selection-end-line="3100" selection-end-column="8" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/art.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -453,16 +461,24 @@
     </entry>
     <entry file="file://C:/ProgramData/Anaconda3/envs/tuyenple/Lib/site-packages/matplotlib/axes/_base.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-357">
+        <state relative-caret-position="95077">
           <caret line="3100" column="8" lean-forward="false" selection-start-line="3100" selection-start-column="8" selection-end-line="3100" selection-end-column="8" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/ProgramData/Anaconda3/envs/tuyenple/Lib/site-packages/matplotlib/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="24212">
+          <caret line="1098" column="16" lean-forward="true" selection-start-line="1098" selection-start-column="16" selection-end-line="1098" selection-end-column="16" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/art.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="19">
-          <caret line="1556" column="0" lean-forward="true" selection-start-line="1556" selection-start-column="0" selection-end-line="1556" selection-end-column="0" />
+        <state relative-caret-position="437">
+          <caret line="554" column="0" lean-forward="true" selection-start-line="554" selection-start-column="0" selection-end-line="554" selection-end-column="0" />
           <folding>
             <element signature="e#0#37#0" expanded="true" />
           </folding>
