@@ -45,7 +45,7 @@ class Ui_MainWindow(object):
         self.treeWidget.setMaximumSize(QtCore.QSize(200, 16777215))
         self.treeWidget.setObjectName(_fromUtf8("treeWidget"))
         self.treeWidget.headerItem().setText(0, _fromUtf8("1"))
-        self.gridLayout.addWidget(self.treeWidget, 0, 2, 1, 1)
+        self.gridLayout.addWidget(self.treeWidget, 0, 2, 0, 1)
 
         self.leftTreeWidget = QtGui.QTreeWidget(self.mainContainer)
         self.leftTreeWidget.setMaximumSize(QtCore.QSize(200, 16777215))
