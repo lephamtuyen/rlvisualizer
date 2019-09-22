@@ -79,6 +79,8 @@ class Ui_MainWindow(object):
         self.open.setObjectName(_fromUtf8("open"))
         self.saveAnimation = QtGui.QAction(MainWindow)
         self.saveAnimation.setObjectName(_fromUtf8("Save Animation"))
+        self.saveReverseAnimation = QtGui.QAction(MainWindow)
+        self.saveReverseAnimation.setObjectName(_fromUtf8("Save Reverse Animation"))
         self.saveData = QtGui.QAction(MainWindow)
         self.saveData.setObjectName(_fromUtf8("Save Data"))
         self.exit = QtGui.QAction(MainWindow)
@@ -86,6 +88,7 @@ class Ui_MainWindow(object):
 
         self.menuFile.addAction(self.open)
         self.menuFile.addAction(self.saveAnimation)
+        self.menuFile.addAction(self.saveReverseAnimation)
         self.menuFile.addAction(self.saveData)
         self.menuFile.addAction(self.exit)
 
@@ -165,6 +168,7 @@ class Ui_MainWindow(object):
         self.about.setText(_translate("MainWindow", "About", None))
         self.open.setText(_translate("MainWindow", "Open", None))
         self.saveAnimation.setText(_translate("MainWindow", "Save Animation", None))
+        self.saveReverseAnimation.setText(_translate("MainWindow", "Save Reverse Animation", None))
         self.saveData.setText(_translate("MainWindow", "Save Data", None))
         self.addTitle.setText(_translate("MainWindow", "Add Title", None))
         self.selectArea.setText(_translate("MainWindow", "Select Area", None))
