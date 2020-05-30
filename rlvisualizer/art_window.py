@@ -129,6 +129,17 @@ class Ui_MainWindow(object):
         self.colorMenu = self.menuEdit.addMenu("Assign Color")
         self.rainbowColor = QtGui.QAction(MainWindow)
         self.rainbowColor.setObjectName(_fromUtf8("Rainbow Color Set"))
+
+        self.qualitativeColorMenu = self.colorMenu.addMenu("Qualitative Color Sets")
+        colors = ['Pastel1', 'Pastel2', 'Paired', 'Accent',
+            'Dark2', 'Set1', 'Set2', 'Set3',
+            'tab10', 'tab20', 'tab20b', 'tab20c']
+        for color in colors:
+            setattr(self, color+'Set', QtGui.QAction(MainWindow))
+            getattr(self, color+'Set').setObjectName(_fromUtf8(color+' Set'))
+            self.qualitativeColorMenu.addAction(getattr(self, color+'Set'))
+
+
         self.rangeColor = QtGui.QAction(MainWindow)
         self.rangeColor.setObjectName(_fromUtf8("Range Color Set"))
         self.cmapRangeColor = QtGui.QAction(MainWindow)
@@ -182,6 +193,13 @@ class Ui_MainWindow(object):
         self.rainbowColor.setText(_translate("MainWindow", "Rainbow Color Set", None))
         self.rangeColor.setText(_translate("MainWindow", "Range Color Set", None))
         self.cmapRangeColor.setText(_translate("MainWindow", "Cmap Range Color Set", None))
+
+        colors = ['Pastel1', 'Pastel2', 'Paired', 'Accent',
+                  'Dark2', 'Set1', 'Set2', 'Set3',
+                  'tab10', 'tab20', 'tab20b', 'tab20c']
+        for color in colors:
+            getattr(self, color+'Set').setText(_translate("MainWindow", color+' Set', None))
+
         self.pickColor.setText(_translate("MainWindow", "Pick Color Set (one-by-one)", None))
         self.exit.setText(_translate("MainWindow", "Exit", None))
         self.savePresets.setText(_translate("MainWindow", "Save", None))
